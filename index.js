@@ -38,3 +38,4 @@ exports.updateClaimStatus = async (req, res) => {
   // Redirect to the success or failure page
   res.redirect(status === "success" ? "/success" : "/failure");
 };
+
