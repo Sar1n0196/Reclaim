@@ -1,4 +1,5 @@
 const xano = require("@xano/js-sdk");
+const { Reclaim } = require("@reclaimprotocol/reclaim-sdk");
 
 const client = new xano.Client("Enter_Xano_API_Key_Here");
 
@@ -32,10 +33,9 @@ exports.getClaimStatus = async (req, res) => {
 exports.updateClaimStatus = async (req, res) => {
   const { claimId, status } = req.body;
 
-  // Update the claim after usrr has completed the claim in Reclaim
+  // Update the claim after the user has completed the claim in Reclaim
   await client.query("UPDATE claims SET status = ? WHERE id = ?", status, claimId);
 
   // Redirect to the success or failure page
   res.redirect(status === "success" ? "/success" : "/failure");
 };
-
