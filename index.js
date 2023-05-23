@@ -1,41 +1,111 @@
-const xano = require("@xano/js-sdk");
-const { Reclaim } = require("@reclaimprotocol/reclaim-sdk");
+const express = require('express');
+const bodyParser = require('body-parser');
+const { v4: uuidv4 } = require('uuid');
+const { Reclaim } = require('@reclaimprotocol/reclaim-sdk');
+const mongoose = require('mongoose');
 
-const client = new xano.Client("Enter_Xano_API_Key_Here");
+const app = express();
+const port = 3000;
+
+// Connect to MongoDB
+mongoose.connect('MONGODB_CONNECION_URL', { useNewUrlParser: true, useUnifiedTopology: true });
+const db = mongoose.connection;
+db.on('error', console.error.bind(console, 'MongoDB connection error:'));
+
+// Define a Claim schema for MongoDB
+const claimSchema = new mongoose.Schema({
+  id: String,
+  status: String,
+});
+const Claim = mongoose.model('Claim', claimSchema);
+
+// Initialising the ReclaimSDK
+const reclaim = new Reclaim();
+
+// Middleware
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
 
 // POST /generateClaim
-exports.generateClaim = async (req, res) => {
+app.post('/generateClaim', async (req, res) => {
   const { walletAddress } = req.body;
 
-  // Generate claim from Reclaim SDK
-  const claim = await Reclaim.generateClaim(walletAddress);
+  try {
+    // Generate the claim using the Reclaim SDK
+    const claim = await reclaim.generateClaim(walletAddress);
 
-  // Send back the response template to the TPH website
-  res.json({
-    claim,
-  });
-};
+    // Save the claim to the MongoDB database
+    const newClaim = new Claim({
+      id: claim.id,
+      status: 'in_progress',
+    });
+    await newClaim.save();
+
+    // Send back the response template to the TPH website
+    res.json({
+      claim,
+    });
+  } catch (error) {
+    // Handle any errors that occurred during claim generation
+    res.status(500).json({
+      error: 'Claim generation failed',
+    });
+  }
+});
 
 // GET /claimStatus
-exports.getClaimStatus = async (req, res) => {
+app.get('/claimStatus', async (req, res) => {
   const { claimId } = req.query;
 
-  // Fetch the claim status
-  const claimStatus = await client.query("SELECT * FROM claims WHERE id = ?", claimId);
+  try {
+    // Fetch the claim status from the MongoDB database
+    const claim = await Claim.findOne({ id: claimId });
 
-  // Loading UI on webflow
-  res.json({
-    claimStatus,
-  });
-};
+    // Check if the claim exists
+    if (!claim) {
+      return res.status(404).json({
+        error: 'Claim not found',
+      });
+    }
 
-// UPDATE /claimStatus
-exports.updateClaimStatus = async (req, res) => {
+    res.json({
+      claimStatus: claim,
+    });
+  } catch (error) {
+    // Handle any errors that occurred during claim status retrieval
+    res.status(500).json({
+      error: 'Failed to retrieve claim status',
+    });
+  }
+});
+
+// PUT /claimStatus
+app.put('/claimStatus', async (req, res) => {
   const { claimId, status } = req.body;
 
-  // Update the claim after the user has completed the claim in Reclaim
-  await client.query("UPDATE claims SET status = ? WHERE id = ?", status, claimId);
+  try {
+    // Update the claim status in the MongoDB database
+    const claim = await Claim.findOneAndUpdate({ id: claimId }, { status }, { new: true });
 
-  // Redirect to the success or failure page
-  res.redirect(status === "success" ? "/success" : "/failure");
-};
+    // Check if the claim exists
+    if (!claim) {
+      return res.status(404).json({
+        error: 'Claim not found',
+      });
+    }
+
+    res.json({
+      message: 'Claim status updated successfully',
+    });
+  } catch (error) {
+    // Handle any errors that occurred during claim status update
+    res.status(500).json({
+      error: 'Failed to update claim status',
+    });
+  }
+});
+
+// Start the server
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
