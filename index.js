@@ -7,19 +7,19 @@ const mongoose = require('mongoose');
 const app = express();
 const port = 3000;
 
-// Connect to MongoDB
-mongoose.connect('MONGODB_CONNECION_URL', { useNewUrlParser: true, useUnifiedTopology: true });
+// Connecting to MongoDB
+mongoose.connect('con_url', { useNewUrlParser: true, useUnifiedTopology: true });
 const db = mongoose.connection;
 db.on('error', console.error.bind(console, 'MongoDB connection error:'));
 
-// Define a Claim schema for MongoDB
+// Defining a Claim schema for MongoDB
 const claimSchema = new mongoose.Schema({
   id: String,
   status: String,
 });
 const Claim = mongoose.model('Claim', claimSchema);
 
-// Initialising the ReclaimSDK
+// Initialising Reclaim
 const reclaim = new Reclaim();
 
 // Middleware
@@ -31,22 +31,22 @@ app.post('/generateClaim', async (req, res) => {
   const { walletAddress } = req.body;
 
   try {
-    // Generate the claim using the Reclaim SDK
+    // Generate claim using Reclaim 
     const claim = await reclaim.generateClaim(walletAddress);
 
-    // Save the claim to the MongoDB database
+    // Save claim to MongoDB database
     const newClaim = new Claim({
       id: claim.id,
       status: 'in_progress',
     });
     await newClaim.save();
 
-    // Send back the response template to the TPH website
+    // Send back response template to TPH website
     res.json({
       claim,
     });
   } catch (error) {
-    // Handle any errors that occurred during claim generation
+    // Error hadling
     res.status(500).json({
       error: 'Claim generation failed',
     });
@@ -58,10 +58,10 @@ app.get('/claimStatus', async (req, res) => {
   const { claimId } = req.query;
 
   try {
-    // Fetch the claim status from the MongoDB database
+    // Fetch claim status from MongoDB database
     const claim = await Claim.findOne({ id: claimId });
 
-    // Check if the claim exists
+    // Check if claim exists
     if (!claim) {
       return res.status(404).json({
         error: 'Claim not found',
@@ -72,7 +72,7 @@ app.get('/claimStatus', async (req, res) => {
       claimStatus: claim,
     });
   } catch (error) {
-    // Handle any errors that occurred during claim status retrieval
+    // Error handling
     res.status(500).json({
       error: 'Failed to retrieve claim status',
     });
@@ -84,10 +84,10 @@ app.put('/claimStatus', async (req, res) => {
   const { claimId, status } = req.body;
 
   try {
-    // Update the claim status in the MongoDB database
+    // Update  status in MongoDB database
     const claim = await Claim.findOneAndUpdate({ id: claimId }, { status }, { new: true });
 
-    // Check if the claim exists
+    // Check ife claim exists
     if (!claim) {
       return res.status(404).json({
         error: 'Claim not found',
@@ -98,9 +98,61 @@ app.put('/claimStatus', async (req, res) => {
       message: 'Claim status updated successfully',
     });
   } catch (error) {
-    // Handle any errors that occurred during claim status update
+    // error handling
     res.status(500).json({
       error: 'Failed to update claim status',
+    });
+  }
+});
+
+// GET /claim
+app.get('/claim', async (req, res) => {
+  const { claimId } = req.query;
+
+  try {
+    // Fetch claim from MongoDB database
+    const claim = await Claim.findOne({ id: claimId });
+
+    // Check if claim exists
+    if (!claim) {
+      return res.status(404).json({
+        error: 'Claim not found',
+      });
+    }
+
+    res.json({
+      claim,
+    });
+  } catch (error) {
+    // error handling
+    res.status(500).json({
+      error: 'Failed to retrieve claim',
+    });
+  }
+});
+
+// DELETE /claim
+app.delete('/claim', async (req, res) => {
+  const { claimId } = req.query;
+
+  try {
+    // Delete claim from MongoDB database
+    const claim = await Claim.findOneAndDelete({ id: claimId });
+
+    // Check if claim exists
+    if (!claim) {
+      return res.status(404).json({
+        error: 'Claim not found',
+      });
+    }
+
+    res.json({
+      message: 'Claim deleted successfully',
+    });
+  } catch (error) {
+    // Error handling
+    res.status(500).json({
+      error: 'Failed to delete claim',
     });
   }
 });
