@@ -1,5 +1,5 @@
 {
-    "name": "express-reclaim",
+    "name": "TPH_backend",
     "version": "1.0.0",
     "description": "An Express app that generates and tracks claims using the Reclaim SDK",
     "main": "index.js",
