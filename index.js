@@ -8,7 +8,7 @@ const app = express();
 const port = 3000;
 
 // Connecting to MongoDB
-mongoose.connect('con_url', { useNewUrlParser: true, useUnifiedTopology: true });
+mongoose.connect('mongodb://localhost:27017/mydatabase', { useNewUrlParser: true, useUnifiedTopology: true });
 const db = mongoose.connection;
 db.on('error', console.error.bind(console, 'MongoDB connection error:'));
 
@@ -46,7 +46,8 @@ app.post('/generateClaim', async (req, res) => {
       claim,
     });
   } catch (error) {
-    // Error hadling
+    // Error handling
+    console.error(error);
     res.status(500).json({
       error: 'Claim generation failed',
     });
@@ -69,10 +70,11 @@ app.get('/claimStatus', async (req, res) => {
     }
 
     res.json({
-      claimStatus: claim,
+      claimStatus: claim.status,
     });
   } catch (error) {
     // Error handling
+    console.error(error);
     res.status(500).json({
       error: 'Failed to retrieve claim status',
     });
@@ -84,10 +86,10 @@ app.put('/claimStatus', async (req, res) => {
   const { claimId, status } = req.body;
 
   try {
-    // Update  status in MongoDB database
-    const claim = await Claim.findOneAndUpdate({ id: claimId }, { status }, { new: true });
+    // Update status in MongoDB database
+    const claim = await Claim.findOneAndUpdate({ id: claimId }, { status });
 
-    // Check ife claim exists
+    // Check if claim exists
     if (!claim) {
       return res.status(404).json({
         error: 'Claim not found',
@@ -98,7 +100,8 @@ app.put('/claimStatus', async (req, res) => {
       message: 'Claim status updated successfully',
     });
   } catch (error) {
-    // error handling
+    // Error handling
+    console.error(error);
     res.status(500).json({
       error: 'Failed to update claim status',
     });
@@ -124,7 +127,8 @@ app.get('/claim', async (req, res) => {
       claim,
     });
   } catch (error) {
-    // error handling
+    // Error handling
+    console.error(error);
     res.status(500).json({
       error: 'Failed to retrieve claim',
     });
@@ -137,7 +141,7 @@ app.delete('/claim', async (req, res) => {
 
   try {
     // Delete claim from MongoDB database
-    const claim = await Claim.findOneAndDelete({ id: claimId });
+    await Claim.findOneAndDelete({ id: claimId });
 
     // Check if claim exists
     if (!claim) {
@@ -151,6 +155,7 @@ app.delete('/claim', async (req, res) => {
     });
   } catch (error) {
     // Error handling
+    console.error(error);
     res.status(500).json({
       error: 'Failed to delete claim',
     });
